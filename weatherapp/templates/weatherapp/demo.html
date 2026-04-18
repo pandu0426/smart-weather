@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartWeather — Demo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f7f6f3;
+      --surface:   #ffffff;
+      --surface-2: #fafaf8;
+      --border:    #e4e2dd;
+      --border-2:  #d8d5cf;
+      --text:      #1a1916;
+      --muted:     #6b6760;
+      --dim:       #a09d98;
+      --accent:    #2563eb;
+      --accent-bg: #eff4ff;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 20px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.09), 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Geist', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px);
+      background-size: 26px 26px;
+      pointer-events: none; z-index: 0;
+      mask-image: radial-gradient(ellipse 85% 80% at 50% 40%, black 15%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 85% 80% at 50% 40%, black 15%, transparent 100%);
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 50px;
+      background: rgba(247,246,243,0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-weight: 600; font-size: 0.88rem;
+      color: var(--text); text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-logo-mark {
+      width: 20px; height: 20px; background: var(--text);
+      border-radius: 5px; display: grid; place-items: center;
+      color: #fff; font-size: 0.6rem;
+    }
+
+    .nav-links {
+      display: flex; align-items: center; gap: 0.1rem;
+    }
+
+    .nav-link {
+      font-size: 0.81rem; color: var(--muted);
+      text-decoration: none; padding: 0.28rem 0.65rem; border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .nav-link:hover { color: var(--text); background: rgba(0,0,0,0.04); }
+    .nav-link.active { color: var(--text); font-weight: 500; }
+
+    .nav-cta {
+      font-size: 0.81rem; font-weight: 500;
+      color: #fff; background: var(--text);
+      text-decoration: none; padding: 0.32rem 0.85rem; border-radius: 6px;
+      transition: opacity 0.15s;
+    }
+    .nav-cta:hover { opacity: 0.8; }
+
+    /* ── Page ── */
+    .page {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      padding: 6.5rem 1.5rem 4rem;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    .container {
+      width: 100%; max-width: 480px;
+      display: flex; flex-direction: column; gap: 0.75rem;
+    }
+
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Page header ── */
+    .page-header {
+      text-align: center; margin-bottom: 1.6rem;
+      animation: riseIn 0.45s ease both;
+    }
+
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-size: 0.7rem; font-weight: 500;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--accent); background: var(--accent-bg);
+      border: 1px solid rgba(37,99,235,0.18);
+      padding: 0.26rem 0.75rem; border-radius: 100px;
+      margin-bottom: 1.1rem;
+    }
+
+    .page-title {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-weight: 400; font-size: clamp(1.8rem, 4vw, 2.5rem);
+      letter-spacing: -0.02em; line-height: 1.15;
+      color: var(--text); margin-bottom: 0.65rem;
+    }
+
+    .page-sub {
+      font-size: 0.91rem; font-weight: 300;
+      color: var(--muted); line-height: 1.65;
+      max-width: 360px; margin: 0 auto;
+    }
+
+    /* ── Demo card ── */
+    .demo-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      animation: riseIn 0.45s 0.07s ease both;
+    }
+
+    /* Preview mockup */
+    .demo-preview {
+      padding: 1.4rem 1.5rem;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .preview-label {
+      font-size: 0.67rem; font-weight: 600;
+      letter-spacing: 0.09em; text-transform: uppercase;
+      color: var(--dim); margin-bottom: 0.85rem;
+    }
+
+    /* Mini dashboard mockup */
+    .mock-shell {
+      border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden;
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .mock-nav {
+      height: 32px; background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 0.75rem; gap: 0.4rem;
+    }
+
+    .mock-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--border-2);
+    }
+
+    .mock-bar {
+      height: 22px; border-radius: 4px; background: var(--border);
+      flex: 1; margin-left: 0.5rem;
+    }
+
+    .mock-body {
+      padding: 0.85rem;
+      display: flex; flex-direction: column; gap: 0.55rem;
+    }
+
+    .mock-search {
+      height: 30px; border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      display: flex; align-items: center; padding: 0 0.65rem; gap: 0.4rem;
+    }
+
+    .mock-search-icon {
+      width: 11px; height: 11px; border-radius: 50%;
+      border: 1.5px solid var(--dim); position: relative;
+    }
+
+    .mock-placeholder {
+      height: 8px; border-radius: 4px; background: var(--border);
+      flex: 1;
+    }
+
+    .mock-search-btn {
+      height: 20px; width: 44px; border-radius: 4px;
+      background: var(--border-2);
+    }
+
+    .mock-card {
+      border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden;
+    }
+
+    .mock-card-header {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .mock-city {
+      height: 10px; width: 70px; border-radius: 4px; background: var(--border);
+    }
+
+    .mock-icon-placeholder {
+      width: 26px; height: 26px; border-radius: 6px; background: var(--border);
+    }
+
+    .mock-temp-row {
+      padding: 0.6rem 0.75rem;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mock-temp {
+      height: 22px; width: 65px; border-radius: 5px; background: #e8e6e2;
+    }
+
+    .mock-desc {
+      height: 8px; width: 55px; border-radius: 4px; background: var(--border);
+    }
+
+    .mock-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+      background: var(--border);
+    }
+
+    .mock-cell {
+      background: var(--surface);
+      padding: 0.5rem 0.65rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+
+    .mock-cell-ico {
+      width: 18px; height: 18px; border-radius: 4px; background: var(--bg);
+      border: 1px solid var(--border);
+    }
+
+    .mock-cell-lines {
+      display: flex; flex-direction: column; gap: 0.25rem;
+    }
+
+    .mock-line-sm { height: 5px; width: 30px; border-radius: 3px; background: var(--border); }
+    .mock-line-md { height: 7px; width: 42px; border-radius: 3px; background: #e2dfda; }
+
+    /* ── Demo body ── */
+    .demo-body {
+      padding: 1.4rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .demo-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.15rem; font-weight: 400;
+      letter-spacing: -0.02em;
+      color: var(--text); margin-bottom: 0.45rem;
+    }
+
+    .demo-desc {
+      font-size: 0.82rem; font-weight: 300;
+      color: var(--muted); line-height: 1.6;
+      margin-bottom: 1.1rem;
+    }
+
+    .steps {
+      display: flex; flex-direction: column; gap: 0.55rem;
+    }
+
+    .step {
+      display: flex; align-items: flex-start; gap: 0.7rem;
+    }
+
+    .step-num {
+      width: 20px; height: 20px; flex-shrink: 0;
+      border-radius: 50%; border: 1px solid var(--border);
+      background: var(--surface-2);
+      display: grid; place-items: center;
+      font-size: 0.65rem; font-weight: 600;
+      color: var(--muted); margin-top: 1px;
+    }
+
+    .step-text {
+      font-size: 0.8rem; color: var(--muted);
+      line-height: 1.5; padding-top: 2px;
+    }
+
+    .step-text strong {
+      color: var(--text); font-weight: 500;
+    }
+
+    /* ── CTA ── */
+    .demo-cta {
+      padding: 1.2rem 1.5rem;
+      display: flex; flex-direction: column; gap: 0.8rem;
+    }
+
+    .btn-launch {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0.5rem;
+      font-family: 'Geist', sans-serif;
+      font-size: 0.9rem; font-weight: 500;
+      color: #fff; background: var(--text);
+      text-decoration: none; border-radius: 9px;
+      padding: 0.75rem 1.5rem;
+      box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.08);
+      transition: opacity 0.15s, transform 0.15s;
+    }
+    .btn-launch:hover { opacity: 0.85; transform: translateY(-1px); }
+
+    .demo-links {
+      display: flex; align-items: center; justify-content: center;
+      gap: 1.2rem;
+    }
+
+    .demo-link {
+      font-size: 0.78rem; color: var(--dim);
+      text-decoration: none;
+      display: flex; align-items: center; gap: 0.3rem;
+      transition: color 0.15s;
+    }
+    .demo-link:hover { color: var(--muted); }
+
+    /* ── Note card ── */
+    .note-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 1rem 1.1rem;
+      display: flex; align-items: flex-start; gap: 0.65rem;
+      box-shadow: var(--shadow-sm);
+      animation: riseIn 0.45s 0.14s ease both;
+    }
+
+    .note-icon {
+      width: 26px; height: 26px; flex-shrink: 0;
+      border-radius: 7px; background: #fef9c3;
+      border: 1px solid #fde68a;
+      display: grid; place-items: center;
+      font-size: 0.8rem;
+    }
+
+    .note-text {
+      font-size: 0.78rem; color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .note-text strong { color: var(--text); font-weight: 500; }
+
+    footer {
+      position: relative; z-index: 1;
+      padding: 1.2rem 2rem; text-align: center;
+      font-size: 0.72rem; color: var(--dim);
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 480px) {
+      nav { padding: 0 1rem; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="{% url 'homepage' %}" class="nav-logo">
+      <div class="nav-logo-mark">☁</div>
+      SmartWeather
+    </a>
+    <div class="nav-links">
+      <a href="{% url 'homepage' %}" class="nav-link">Home</a>
+      <a href="{% url 'features' %}" class="nav-link">Features</a>
+      <a href="{% url 'about' %}" class="nav-link">About</a>
+      <a href="{% url 'demo' %}" class="nav-link active">Demo</a>
+    </div>
+    <a href="{% url 'weather-home' %}" class="nav-cta">Open app →</a>
+  </nav>
+
+  <main class="page">
+    <div class="container">
+
+      <div class="page-header">
+        <div class="eyebrow">▷ Try it now</div>
+        <h1 class="page-title">Try SmartWeather</h1>
+        <p class="page-sub">No sign-up, no setup. Search any city and see live weather in seconds.</p>
+      </div>
+
+      <div class="demo-card">
+
+        <!-- Visual mockup preview -->
+        <div class="demo-preview">
+          <div class="preview-label">Dashboard preview</div>
+          <div class="mock-shell">
+            <div class="mock-nav">
+              <div class="mock-dot"></div>
+              <div class="mock-dot"></div>
+              <div class="mock-dot"></div>
+              <div class="mock-bar"></div>
+            </div>
+            <div class="mock-body">
+              <div class="mock-search">
+                <div class="mock-search-icon"></div>
+                <div class="mock-placeholder"></div>
+                <div class="mock-search-btn"></div>
+              </div>
+              <div class="mock-card">
+                <div class="mock-card-header">
+                  <div>
+                    <div class="mock-city"></div>
+                  </div>
+                  <div class="mock-icon-placeholder"></div>
+                </div>
+                <div class="mock-temp-row">
+                  <div class="mock-temp"></div>
+                  <div class="mock-desc"></div>
+                </div>
+                <div class="mock-grid">
+                  <div class="mock-cell">
+                    <div class="mock-cell-ico"></div>
+                    <div class="mock-cell-lines">
+                      <div class="mock-line-sm"></div>
+                      <div class="mock-line-md"></div>
+                    </div>
+                  </div>
+                  <div class="mock-cell">
+                    <div class="mock-cell-ico"></div>
+                    <div class="mock-cell-lines">
+                      <div class="mock-line-sm"></div>
+                      <div class="mock-line-md"></div>
+                    </div>
+                  </div>
+                  <div class="mock-cell">
+                    <div class="mock-cell-ico"></div>
+                    <div class="mock-cell-lines">
+                      <div class="mock-line-sm"></div>
+                      <div class="mock-line-md"></div>
+                    </div>
+                  </div>
+                  <div class="mock-cell">
+                    <div class="mock-cell-ico"></div>
+                    <div class="mock-cell-lines">
+                      <div class="mock-line-sm"></div>
+                      <div class="mock-line-md"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Steps + description -->
+        <div class="demo-body">
+          <div class="demo-title">How it works</div>
+          <p class="demo-desc">SmartWeather queries the OpenWeatherMap API server-side and renders your results instantly — no JavaScript, no loading states.</p>
+          <div class="steps">
+            <div class="step">
+              <div class="step-num">1</div>
+              <div class="step-text"><strong>Type a city name</strong> into the search bar — any city, anywhere in the world.</div>
+            </div>
+            <div class="step">
+              <div class="step-num">2</div>
+              <div class="step-text"><strong>Hit Search</strong> and Django fetches live data from the weather API in real time.</div>
+            </div>
+            <div class="step">
+              <div class="step-num">3</div>
+              <div class="step-text"><strong>See your results</strong> — temperature, humidity, wind speed, sky condition, and day.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="demo-cta">
+          <a href="{% url 'weather-home' %}" class="btn-launch">
+            Open Weather Dashboard
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <div class="demo-links">
+            <a href="{% url 'features' %}" class="demo-link">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              View all features
+            </a>
+            <a href="{% url 'about' %}" class="demo-link">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              About this project
+            </a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Note -->
+      <div class="note-card">
+        <div class="note-icon">💡</div>
+        <p class="note-text">
+          <strong>Try searching:</strong> London, Tokyo, New York, Mumbai, Sydney, or any city near you.
+          Results load in under a second.
+        </p>
+      </div>
+
+    </div>
+  </main>
+
+  <footer>© 2025 SmartWeather — Built with precision</footer>
+
+</body>
+</html>

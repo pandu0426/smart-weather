@@ -1,0 +1,45 @@
+/* home.css */
+
+body, html {
+    height: 100%;
+    margin: 0;
+    font-family: "Poppins", sans-serif;
+    background: url('/static/your-beautiful-background.jpg') no-repeat center center fixed;
+    background-size: cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.home-container {
+    text-align: center;
+    color: white;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 15px;
+}
+
+.home-container h1 {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+}
+
+.btn-get-started {
+    display: inline-block;
+    padding: 1rem 3rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #ffffff;
+    background-color: #4475ef;
+    border-radius: 50px;
+    text-decoration: none;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    box-shadow: 0 5px 15px rgba(68, 117, 239, 0.4);
+}
+
+.btn-get-started:hover {
+    background-color: #62b8f5;
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(98, 184, 245, 0.6);
+}
