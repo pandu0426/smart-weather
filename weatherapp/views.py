@@ -7,22 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# List of known countries and Indian states to reject
-INVALID_LOCATIONS = {
-    # Countries
-    "india", "pakistan", "bangladesh", "nepal", "china", "usa", "uk",
-    "australia", "canada", "france", "germany", "japan", "russia",
-    "brazil", "mexico", "italy", "spain", "afghanistan", "iran",
-    # Indian States & UTs
-    "andhra pradesh", "arunachal pradesh", "assam", "bihar", "chhattisgarh",
-    "goa", "gujarat", "haryana", "himachal pradesh", "jharkhand",
-    "karnataka", "kerala", "madhya pradesh", "maharashtra", "manipur",
-    "meghalaya", "mizoram", "nagaland", "odisha", "punjab", "rajasthan",
-    "sikkim", "tamil nadu", "telangana", "tripura", "uttar pradesh",
-    "uttarakhand", "west bengal", "delhi", "jammu and kashmir", "ladakh",
-    "puducherry", "chandigarh", "lakshadweep", "andaman and nicobar",
-    "dadra and nagar haveli", "daman and diu",
-}
+from .constants import INVALID_LOCATIONS
 
 
 def is_valid_city(city: str, api_data: dict) -> tuple[bool, str]:
@@ -61,80 +46,95 @@ def homepage(request):
 
 
 def home(request):
-    # Default fallback image
-    image_url = "https://images.pexels.com/photos/414171/pexels-photo-414171.jpeg"
+    import requests
+    import os
+    import datetime
+    from django.http import JsonResponse
+    from django.shortcuts import render
+
+    # Detect AJAX request (via header or query param)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('ajax') == '1'
 
     if request.method == 'POST' and 'city' in request.POST:
         city = request.POST['city'].strip().title()
+    elif request.GET.get('city'):
+        city = request.GET.get('city').strip().title()
     else:
         city = 'Indore'
 
-    # Dynamic Unsplash image (no API key needed)
-    image_url = f"https://source.unsplash.com/1600x900/?{city},weather"
-
-    # Weather API config
+    # Dynamic Unsplash image
+    image_url = f"https://images.unsplash.com/featured/1600x900/?{city},weather"
     api_key = os.getenv("API_KEY")
-    weather_url = (
-        f'https://api.openweathermap.org/data/2.5/weather'
-        f'?q={city}&appid={api_key}&units=metric'
-    )
+    weather_url = f'https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric'
 
     try:
-        # --- Fetch weather data ---
         response = requests.get(weather_url, timeout=10)
         data = response.json()
 
-        # Check if API returned a valid response
         if data.get("cod") != 200:
-            messages.error(request, f'City "{city}" was not found. Please check the spelling.')
-            raise Exception("City not found by API")
+            raise Exception("City not found")
+
+        # --- Fetch 5-Day Forecast ---
+        forecast_url = f'https://api.openweathermap.org/data/2.5/forecast?q={city}&appid={api_key}&units=metric'
+        f_response = requests.get(forecast_url, timeout=10)
+        f_data = f_response.json()
+        
+        forecast_list = []
+        if f_data.get("cod") == "200":
+            # Extract one forecast per day (approx. 12:00 PM)
+            seen_dates = []
+            for entry in f_data.get('list', []):
+                dt = datetime.datetime.fromtimestamp(entry['dt'])
+                date_str = dt.strftime("%Y-%m-%d")
+                # Pick the forecast closest to noon, and avoid duplicate days
+                if date_str not in seen_dates and dt.hour >= 12:
+                    forecast_list.append({
+                        'day': dt.strftime("%a"),
+                        'temp': round(entry['main']['temp']),
+                        'icon': entry['weather'][0]['icon'],
+                        'desc': entry['weather'][0]['description']
+                    })
+                    seen_dates.append(date_str)
+            # Ensure we only have 5 days
+            forecast_list = forecast_list[:5]
 
         # --- City-level validation ---
+        from .views import is_valid_city
         valid, error_msg = is_valid_city(city, data)
         if not valid:
-            messages.error(request, error_msg)
-            raise Exception("Invalid location type")
+            raise Exception(error_msg)
 
-        # --- Extract weather data ---
-        description = data['weather'][0]['description']
-        icon        = data['weather'][0]['icon']
-        temp        = data['main']['temp']
-        humidity    = data['main']['humidity']
-        wind        = data['wind']['speed']
-        day         = datetime.date.today()
+        weather_data = {
+            'description': data['weather'][0]['description'],
+            'icon':        data['weather'][0]['icon'],
+            'temp':        data['main']['temp'],
+            'humidity':    data['main']['humidity'],
+            'wind':        data['wind']['speed'],
+            'city':        city,
+            'day':         datetime.date.today().strftime("%B %d, %Y"),
+            'image_url':   image_url,
+            'forecast':    forecast_list,
+            'success':     True
+        }
 
-        return render(request, 'weatherapp/index.html', {
-            'description':        description,
-            'icon':               icon,
-            'temp':               temp,
-            'day':                day,
-            'city':               city,
-            'humidity':           humidity,
-            'wind':               wind,
-            'exception_occurred': False,
-            'image_url':          image_url,
-        })
+        if is_ajax:
+            return JsonResponse(weather_data)
+        
+        return render(request, 'weatherapp/index.html', weather_data)
 
-    except Exception:
-        day = datetime.date.today()
-        # Only add a generic fallback message if no specific one was already added
-        storage = messages.get_messages(request)
-        existing = [str(m) for m in storage]
-        storage.used = False  # Reset so messages still render in template
-        if not existing:
-            messages.error(request, 'City data is not available. Please try a valid city name.')
-
-        return render(request, 'weatherapp/index.html', {
-            'description':        'clear sky',
-            'icon':               '01d',
-            'temp':               25,
-            'day':                day,
-            'city':               'Indore',
-            'humidity':           '--',
-            'wind':               '--',
-            'exception_occurred': True,
-            'image_url':          image_url,
-        })
+    except Exception as e:
+        error_data = {
+            'success': False,
+            'error': str(e) if "City not found" in str(e) or "not a city" in str(e) else "City data not available.",
+            'city': city,
+            'day': datetime.date.today().strftime("%B %d, %Y"),
+            'image_url': image_url,
+        }
+        if is_ajax:
+            return JsonResponse(error_data)
+        
+        # Fallback for direct page load errors
+        return render(request, 'weatherapp/index.html', {**error_data, 'exception_occurred': True})
 
 
 def features(request):
@@ -145,3 +145,44 @@ def about(request):
 
 def demo(request):
     return render(request, 'weatherapp/demo.html')
+
+def city_suggestions(request):
+    import requests
+    import os
+    from django.http import JsonResponse
+    
+    query = request.GET.get('q', '').strip()
+    if len(query) < 2:
+        return JsonResponse([], safe=False)
+    
+    api_key = os.getenv("API_KEY")
+    # Increase limit to 20 to find more regional matches
+    geo_url = f"http://api.openweathermap.org/geo/1.0/direct?q={query}&limit=20&appid={api_key}"
+    
+    try:
+        response = requests.get(geo_url, timeout=5)
+        data = response.json()
+        
+        indian_suggestions = []
+        other_suggestions = []
+        
+        for item in data:
+            name = item.get('name')
+            state = item.get('state')
+            country = item.get('country')
+            
+            location = f"{name}"
+            if state:
+                location += f", {state}"
+            location += f", {country}"
+            
+            if country == 'IN':
+                indian_suggestions.append(location)
+            else:
+                other_suggestions.append(location)
+        
+        # Combine results: India first, then the rest
+        final_suggestions = indian_suggestions + other_suggestions
+        return JsonResponse(final_suggestions[:10], safe=False)
+    except Exception:
+        return JsonResponse([], safe=False)

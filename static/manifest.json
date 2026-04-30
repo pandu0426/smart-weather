@@ -1,0 +1,21 @@
+{
+  "name": "SmartWeather",
+  "short_name": "Weather",
+  "start_url": "/index/",
+  "display": "standalone",
+  "background_color": "#f7f6f3",
+  "theme_color": "#1a1916",
+  "description": "Premium real-time weather dashboard.",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1163/1163764.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1163/1163764.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

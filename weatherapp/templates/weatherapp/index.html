@@ -4,6 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SmartWeather — Dashboard</title>
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#1a1916">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SmartWeather">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1163/1163764.png">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -113,7 +119,6 @@
       border: 1px solid var(--border);
       border-radius: 11px;
       box-shadow: var(--shadow-sm);
-      overflow: hidden;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
     .search-wrap:focus-within {
@@ -123,6 +128,8 @@
 
     .search-row {
       display: flex; align-items: center;
+      overflow: hidden;
+      border-radius: 11px;
     }
 
     .search-icon-wrap {
@@ -155,6 +162,99 @@
       flex-shrink: 0;
     }
     .search-submit:hover { background: var(--bg); color: var(--text); }
+
+    /* ── Suggestions ── */
+    .search-wrap { position: relative; }
+    .suggestions-list {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      box-shadow: var(--shadow-lg);
+      z-index: 100;
+      overflow: hidden;
+      display: none;
+      animation: slideUp 0.2s ease-out;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .suggestion-item {
+      padding: 0.8rem 1rem;
+      font-size: 0.85rem;
+      color: var(--text);
+      cursor: pointer;
+      display: flex; align-items: center; gap: 0.6rem;
+      transition: background 0.15s;
+    }
+    .suggestion-item:hover { background: rgba(0,0,0,0.04); }
+    .suggestion-item i { color: var(--dim); font-size: 0.75rem; }
+
+    .locate-btn {
+      background: none; border: none; padding: 0 0.85rem;
+      color: var(--dim); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: color 0.15s;
+    }
+    .locate-btn:hover { color: var(--accent); }
+
+    .mic-btn {
+      background: none; border: none; padding: 0 0.85rem;
+      color: var(--dim); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: color 0.15s, transform 0.15s;
+    }
+    .mic-btn:hover { color: #dc2626; transform: scale(1.1); }
+    .mic-btn.listening { color: #dc2626; animation: pulseMic 1s infinite; }
+    @keyframes pulseMic { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+    #voice-status {
+      position: absolute; bottom: -20px; left: 1rem;
+      font-size: 0.65rem; color: var(--muted); font-weight: 500;
+      opacity: 0; transition: opacity 0.2s;
+    }
+    #voice-status.visible { opacity: 1; }
+
+    /* ── Chips ── */
+    .quick-chips {
+      display: flex; align-items: center; gap: 0.5rem;
+      flex-wrap: wrap; margin-bottom: 0.25rem;
+      padding: 0 0.25rem;
+    }
+    .chip {
+      font-size: 0.72rem; font-weight: 500;
+      color: var(--muted); background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 0.3rem 0.7rem; border-radius: 100px;
+      cursor: pointer; transition: all 0.15s;
+      box-shadow: var(--shadow-sm);
+    }
+    .chip:hover { border-color: var(--dim); color: var(--text); transform: translateY(-1px); }
+    .chip.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+    /* ── Forecast ── */
+    .forecast-strip {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 1rem 1.2rem;
+      background: var(--surface-2);
+      border-top: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none; /* Firefox */
+    }
+    .forecast-strip::-webkit-scrollbar { display: none; } /* Safari/Chrome */
+
+    .forecast-item {
+      display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+      min-width: 60px; flex-shrink: 0;
+      animation: fadeIn 0.4s ease both;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+    .f-day { font-size: 0.7rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em; }
+    .f-icon { width: 32px; height: 32px; object-fit: contain; }
+    .f-temp { font-size: 0.88rem; font-weight: 600; color: var(--text); }
 
     /* ── Error ── */
     .error-bar {
@@ -196,6 +296,52 @@
       box-shadow: var(--shadow-md);
       overflow: hidden;
       animation: cardIn 0.35s cubic-bezier(0.22,1,0.36,1) both;
+      position: relative;
+    }
+
+    /* Dynamic Themes */
+    .weather-card[data-weather*="clear"] { border-color: #fcd34d; }
+    .weather-card[data-weather*="cloud"] { border-color: #cbd5e1; }
+    .weather-card[data-weather*="rain"] { border-color: #60a5fa; }
+    .weather-card[data-weather*="storm"] { border-color: #818cf8; }
+    .weather-card[data-weather*="snow"] { border-color: #94a3b8; }
+    .weather-card[data-weather*="mist"], .weather-card[data-weather*="haze"] { border-color: #e2e8f0; }
+
+    .weather-card::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.05; z-index: 0;
+    }
+
+    /* ── Weather Effects ── */
+    .weather-effects {
+      position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; opacity: 0.3;
+    }
+
+    /* Sun Glow (Clear) */
+    .weather-card[data-weather*="clear"] .weather-effects {
+      background: radial-gradient(circle at 80% 20%, rgba(251, 191, 36, 0.4), transparent 50%);
+      animation: pulseGlow 8s ease-in-out infinite;
+    }
+    @keyframes pulseGlow { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.5; } }
+
+    /* Clouds (Cloudy) */
+    .weather-card[data-weather*="cloud"] .weather-effects::before,
+    .weather-card[data-weather*="cloud"] .weather-effects::after {
+      content: ''; position: absolute; background: #fff; border-radius: 50%; opacity: 0.4;
+      filter: blur(20px); animation: drift 20s linear infinite;
+    }
+    .weather-card[data-weather*="cloud"] .weather-effects::before { width: 150px; height: 100px; top: 10%; left: -20%; }
+    .weather-card[data-weather*="cloud"] .weather-effects::after { width: 200px; height: 120px; top: 40%; left: -40%; animation-delay: -10s; }
+    @keyframes drift { from { transform: translateX(0); } to { transform: translateX(600px); } }
+
+    /* Rain (Rainy) */
+    .weather-card[data-weather*="rain"] .weather-effects {
+      background-image: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+      background-size: 2px 20px;
+      animation: rain 0.4s linear infinite;
+    }
+    @keyframes rain { 
+      from { background-position: 0 0; } 
+      to { background-position: 0 420px; } 
     }
     @keyframes cardIn {
       from { opacity: 0; transform: translateY(12px); }
@@ -400,47 +546,69 @@
               class="search-input"
               type="text"
               name="city"
+              id="city-input"
               placeholder="Search any city…"
               value="{{ city }}"
               autocomplete="off"
             />
+            <button type="button" class="locate-btn" id="locate-btn" title="Locate me">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+            </button>
+            <button type="button" class="mic-btn" id="mic-btn" title="Voice search">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
             <button type="submit" class="search-submit">
               Search
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </button>
           </div>
+          <div class="suggestions-list" id="suggestions-list"></div>
+          <div id="voice-status">Listening...</div>
         </form>
       </div>
 
+      <!-- Quick Chips -->
+      <div class="quick-chips">
+        <button class="chip" onclick="searchCity('Indore')">Indore</button>
+        <button class="chip" onclick="searchCity('Mumbai')">Mumbai</button>
+        <button class="chip" onclick="searchCity('Delhi')">Delhi</button>
+        <button class="chip" onclick="searchCity('London')">London</button>
+        <button class="chip" onclick="searchCity('New York')">NYC</button>
+      </div>
+
       <!-- Error state -->
-      {% if exception_occurred %}
-      <div class="error-bar">
+      <div class="error-bar" id="error-bar" style="{% if not exception_occurred %}display: none;{% endif %}">
         <div class="error-icon-wrap">!</div>
         <div class="error-content">
-          <div class="error-title">City not found</div>
-          <div class="error-desc">Check the spelling or try a nearby city.</div>
+          <div class="error-title" id="error-title">City not found</div>
+          <div class="error-desc" id="error-desc">Check the spelling or try a nearby city.</div>
         </div>
       </div>
-      {% endif %}
 
       <!-- Weather result -->
       {% if city and not exception_occurred %}
-      <div class="weather-card">
+      <div class="weather-card" data-weather="{{ description|lower }}">
+        <div class="weather-effects"></div>
 
         <!-- Header -->
         <div class="card-header">
           <div class="card-header-left">
-            <div class="city-name">{{ city }}</div>
-            <div class="card-day">{{ day }}</div>
+            <div class="city-name" id="city-name">{{ city }}</div>
+            <div class="card-day" id="card-day">{{ day }}</div>
           </div>
-          <div class="card-icon-wrap">
+          <div class="card-icon-wrap" id="weather-icon-wrap">
             {% if icon %}
               <img
-                src="http://openweathermap.org/img/wn/{{ icon }}@2x.png"
+                id="weather-icon"
+                src="https://openweathermap.org/img/wn/{{ icon }}@2x.png"
                 alt="{{ description }}"
               />
             {% else %}
-              <div class="card-icon-placeholder">🌤️</div>
+              <div class="card-icon-placeholder" id="weather-icon-placeholder">🌤️</div>
             {% endif %}
           </div>
         </div>
@@ -448,10 +616,10 @@
         <!-- Temperature -->
         <div class="temp-row">
           <div class="temp-main">
-            <div class="temp-value">{{ temp }}</div>
+            <div class="temp-value" id="temp-value">{{ temp }}</div>
             <div class="temp-unit">°C</div>
           </div>
-          <div class="temp-desc">{{ description }}</div>
+          <div class="temp-desc" id="temp-desc">{{ description }}</div>
         </div>
 
         <!-- Detail grid -->
@@ -460,7 +628,7 @@
             <div class="detail-ico">💧</div>
             <div class="detail-body">
               <div class="detail-label">Humidity</div>
-              <div class="detail-val">
+              <div class="detail-val" id="humidity-val">
                 {% if humidity %}
                   {{ humidity }}%
                 {% else %}
@@ -473,7 +641,7 @@
             <div class="detail-ico">🌬️</div>
             <div class="detail-body">
               <div class="detail-label">Wind</div>
-              <div class="detail-val">
+              <div class="detail-val" id="wind-val">
                 {% if wind %}
                   {{ wind }} km/h
                 {% else %}
@@ -486,16 +654,27 @@
             <div class="detail-ico">🌡️</div>
             <div class="detail-body">
               <div class="detail-label">Condition</div>
-              <div class="detail-val" style="text-transform:capitalize; font-size:0.82rem;">{{ description }}</div>
+              <div class="detail-val" id="condition-val" style="text-transform:capitalize; font-size:0.82rem;">{{ description }}</div>
             </div>
           </div>
           <div class="detail-cell">
             <div class="detail-ico">📅</div>
             <div class="detail-body">
               <div class="detail-label">Day</div>
-              <div class="detail-val" style="font-size:0.83rem;">{{ day }}</div>
+              <div class="detail-val" id="day-val" style="font-size:0.83rem;">{{ day }}</div>
             </div>
           </div>
+        </div>
+
+        <!-- 5-Day Forecast -->
+        <div class="forecast-strip" id="forecast-strip">
+          {% for f in forecast %}
+            <div class="forecast-item">
+              <span class="f-day">{{ f.day }}</span>
+              <img class="f-icon" src="https://openweathermap.org/img/wn/{{ f.icon }}.png" alt="{{ f.desc }}" />
+              <span class="f-temp">{{ f.temp }}°</span>
+            </div>
+          {% endfor %}
         </div>
 
         <!-- Footer -->
@@ -529,5 +708,261 @@
     </div>
   </main>
 
+  <script>
+    const cityInput = document.getElementById('city-input');
+    const suggestionsList = document.getElementById('suggestions-list');
+    const locateBtn = document.getElementById('locate-btn');
+
+    // --- Autocomplete Logic ---
+    let debounceTimer;
+    cityInput.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      const query = cityInput.value.trim();
+      
+      if (query.length < 2) {
+        suggestionsList.style.display = 'none';
+        return;
+      }
+
+      debounceTimer = setTimeout(async () => {
+        try {
+          const response = await fetch(`/api/suggestions/?q=${encodeURIComponent(query)}`);
+          const suggestions = await response.json();
+          
+          if (suggestions.length > 0) {
+            suggestionsList.innerHTML = suggestions.map(city => `
+              <div class="suggestion-item" onclick="selectSuggestion('${city}')">
+                <span>📍</span> ${city}
+              </div>
+            `).join('');
+            suggestionsList.style.display = 'block';
+          } else {
+            suggestionsList.style.display = 'none';
+          }
+        } catch (err) {
+          console.error('Failed to fetch suggestions', err);
+        }
+      }, 300);
+    });
+
+    // --- Search Submission (AJAX) ---
+    const searchForm = cityInput.form;
+    const weatherCard = document.querySelector('.weather-card');
+    const errorBar = document.getElementById('error-bar');
+    const errorTitle = document.getElementById('error-title');
+    const errorDesc = document.getElementById('error-desc');
+
+    searchForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const city = cityInput.value.trim();
+      if (!city) return;
+
+      // Close suggestions
+      suggestionsList.style.display = 'none';
+      
+      // Loading state
+      const searchBtn = searchForm.querySelector('.search-submit');
+      const originalBtnHtml = searchBtn.innerHTML;
+      searchBtn.innerHTML = '...';
+      searchBtn.disabled = true;
+
+      try {
+        const response = await fetch(`/weather/?city=${encodeURIComponent(city)}&ajax=1`);
+        const data = await response.json();
+
+        if (data.success) {
+          // Update weather card visibility
+          if (weatherCard) weatherCard.style.display = 'block';
+          errorBar.style.display = 'none';
+
+          // Update data
+          document.getElementById('city-name').textContent = data.city;
+          document.getElementById('card-day').textContent = data.day;
+          document.getElementById('temp-value').textContent = data.temp;
+          document.getElementById('temp-desc').textContent = data.description;
+          document.getElementById('humidity-val').textContent = data.humidity + '%';
+          document.getElementById('wind-val').textContent = data.wind + ' km/h';
+          document.getElementById('condition-val').textContent = data.description;
+          document.getElementById('day-val').textContent = data.day;
+
+          // Update icon
+          const iconWrap = document.getElementById('weather-icon-wrap');
+          iconWrap.innerHTML = `<img id="weather-icon" src="https://openweathermap.org/img/wn/${data.icon}@2x.png" alt="${data.description}" />`;
+
+          // Update Forecast
+          const forecastStrip = document.getElementById('forecast-strip');
+          if (forecastStrip && data.forecast) {
+            forecastStrip.innerHTML = data.forecast.map((f, index) => `
+              <div class="forecast-item" style="animation-delay: ${(index + 1) * 0.1}s">
+                <span class="f-day">${f.day}</span>
+                <img class="f-icon" src="https://openweathermap.org/img/wn/${f.icon}.png" alt="${f.desc}" />
+                <span class="f-temp">${f.temp}°</span>
+              </div>
+            `).join('');
+          }
+
+          // Update theme
+          if (weatherCard) {
+            weatherCard.setAttribute('data-weather', data.description.toLowerCase());
+            // Trigger animation
+            weatherCard.style.animation = 'none';
+            weatherCard.offsetHeight; // trigger reflow
+            weatherCard.style.animation = null;
+          }
+
+        } else {
+          // Show error
+          errorBar.style.display = 'flex';
+          errorTitle.textContent = 'Oops!';
+          errorDesc.textContent = data.error;
+          // Optionally hide weather card on error
+          // if (weatherCard) weatherCard.style.display = 'none';
+        }
+      } catch (err) {
+        console.error('Search failed', err);
+        errorBar.style.display = 'flex';
+        errorTitle.textContent = 'Server Error';
+        errorDesc.textContent = 'Unable to fetch weather data. Please try again.';
+      } finally {
+        searchBtn.innerHTML = originalBtnHtml;
+        searchBtn.disabled = false;
+      }
+    });
+
+    function selectSuggestion(city) {
+      cityInput.value = city;
+      suggestionsList.style.display = 'none';
+      // Trigger the AJAX submit instead of form.submit()
+      searchForm.dispatchEvent(new Event('submit'));
+    }
+
+    window.searchCity = function(city) {
+      cityInput.value = city;
+      searchForm.dispatchEvent(new Event('submit'));
+    };
+
+    // Close suggestions on outside click
+    document.addEventListener('click', (e) => {
+      if (!cityInput.contains(e.target) && !suggestionsList.contains(e.target)) {
+        suggestionsList.style.display = 'none';
+      }
+    });
+
+    // --- Geolocation Logic ---
+    locateBtn.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser');
+        return;
+      }
+
+      locateBtn.innerHTML = '...'; // Loading state
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          // Use a reverse geocoding API or handle it in backend
+          // For now, we'll just search by coordinates if the backend supports it, 
+          // but usually OpenWeather needs a city name for your current setup.
+          // Let's use a free reverse geocoding API (BigDataCloud is free/easy)
+          const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
+          const data = await response.json();
+          const city = data.city || data.locality || data.principalSubdivision;
+          
+          if (city) {
+            cityInput.value = city;
+            cityInput.form.submit();
+          } else {
+            alert('Could not determine city name');
+          }
+        } catch (err) {
+          alert('Failed to get city from coordinates');
+        } finally {
+          locateBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
+        }
+      }, () => {
+        alert('Unable to retrieve your location');
+        locateBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
+      });
+    });
+  </script>
+
+  <script>
+    // --- PWA Service Worker Registration ---
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/sw.js')
+          .then(reg => console.log('Service Worker registered'))
+          .catch(err => console.log('Service Worker registration failed', err));
+      });
+    }
+
+    // --- Voice Search Logic ---
+    const micBtn = document.getElementById('mic-btn');
+    const voiceStatus = document.getElementById('voice-status');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.lang = 'en-IN'; // Prioritize Indian English accents
+      recognition.maxAlternatives = 1;
+
+      micBtn.addEventListener('click', () => {
+        try { recognition.start(); } catch(e) {}
+      });
+
+      recognition.onstart = () => {
+        micBtn.classList.add('listening');
+        voiceStatus.textContent = 'Listening...';
+        voiceStatus.classList.add('visible');
+      };
+
+      recognition.onresult = (event) => {
+        let transcript = event.results[0][0].transcript.toLowerCase();
+        
+        // 1. Preprocessing: Remove punctuation and trim
+        transcript = transcript.replace(/[.,!?]/g, "").trim();
+        
+        // 2. Intelligent Extraction
+        const keywords = ['weather in', 'temperature in', 'climate in', 'weather of', 'how is the weather in', 'weather at'];
+        let city = transcript;
+        
+        for (const phrase of keywords) {
+          if (transcript.includes(phrase)) {
+            city = transcript.split(phrase)[1].trim();
+            break;
+          }
+        }
+        
+        // 3. Cleanup extracted city
+        city = city.replace(/^(the|a|an)\s+/i, "").trim();
+
+        if (city) {
+          cityInput.value = city.charAt(0).toUpperCase() + city.slice(1);
+          voiceStatus.textContent = `Heard: "${city}"`;
+          
+          // Trigger the AJAX search
+          searchForm.dispatchEvent(new Event('submit'));
+        } else {
+          voiceStatus.textContent = "Could't hear clearly. Try again.";
+        }
+      };
+
+      recognition.onend = () => {
+        micBtn.classList.remove('listening');
+        setTimeout(() => {
+          voiceStatus.classList.remove('visible');
+        }, 3000);
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error', event.error);
+        voiceStatus.textContent = event.error === 'no-speech' ? 'No speech detected.' : 'Error. Try again.';
+        micBtn.classList.remove('listening');
+      };
+
+    } else {
+      micBtn.style.display = 'none';
+    }
+  </script>
 </body>
 </html>
